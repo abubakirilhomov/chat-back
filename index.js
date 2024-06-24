@@ -20,6 +20,11 @@ const io = socketIo(server, {
   }
 });
 
+// Simple route for root URL
+app.get('/', (req, res) => {
+  res.send('Welcome to the Chat Quiz API');
+});
+
 const quizQuestions = [
   { question: "What is the capital of Spain?", answer: "Madrid" },
   { question: "What is 2 + 2?", answer: "4" },
