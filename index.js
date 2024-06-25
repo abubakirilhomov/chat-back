@@ -20,11 +20,6 @@ const io = socketIo(server, {
   }
 });
 
-// Simple route for root URL
-app.get('/', (req, res) => {
-  res.send('Welcome to the Chat Quiz API');
-});
-
 const quizQuestions = [
   { question: "What is the capital of Spain?", answer: "Madrid" },
   { question: "What is 2 + 2?", answer: "4" },
@@ -51,15 +46,20 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sendQuizAnswer', (data) => {
-    const { room, question, answer } = data;
-    const questionData = quizQuestions.find(q => q.question === question);
-    let result = 'Incorrect';
-    if (questionData && questionData.answer.toLowerCase() === answer.toLowerCase()) {
-      result = 'Correct';
+    try {
+      const { room, question, selectedAnswer } = data;
+      console.log(`Received answer: ${selectedAnswer} for question: ${question} in room: ${room}`);
+      const questionData = quizQuestions.find(q => q.question === question);
+      let result = 'Incorrect';
+      if (questionData && questionData.answer.toLowerCase() === selectedAnswer.toLowerCase()) {
+        result = 'Correct';
+      }
+      const responseMessage = `Question: ${question}, Answer: ${selectedAnswer} - ${result}`;
+      io.to(room).emit('receiveQuizAnswer', responseMessage);
+      console.log(`Broadcasting answer to room ${room}: ${responseMessage}`);
+    } catch (error) {
+      console.error(`Error processing quiz answer: ${error.message}`);
     }
-    const responseMessage = `Question: ${question}, Answer: ${answer} - ${result}`;
-    io.to(room).emit('receiveQuizAnswer', responseMessage);
-    console.log(`Broadcasting answer to room ${room}: ${responseMessage}`);
   });
 });
 
