@@ -6,7 +6,7 @@ const { Server } = require('http');
 const app = express();
 
 app.use(cors({
-  origin: ['https://chat-quiz-front.vercel.app',"http://localhost:3000/"],
+  origin: ['https://chat-quiz-front.vercel.app',"http://localhost:3000"],
   methods: ['GET', 'POST'],
   credentials: true
 }));
@@ -15,7 +15,7 @@ const server = Server(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: ['https://chat-quiz-front.vercel.app', "http://localhost:3000/"],
+    origin: ['https://chat-quiz-front.vercel.app', "http://localhost:3000"],
     methods: ['GET', 'POST']
   }
 });
