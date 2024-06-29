@@ -28,6 +28,8 @@ const quizQuestions = [
   { question: "What is the boiling point of water in Celsius?", answer: "100" }
 ];
 
+const userResults = {};
+
 io.on('connection', (socket) => {
   console.log(`${socket.id} New user connected`);
 
@@ -47,7 +49,7 @@ io.on('connection', (socket) => {
 
   socket.on('sendQuizAnswer', (data) => {
     try {
-      const { room, question, selectedAnswer } = data;
+      const { room, question, selectedAnswer, nickname } = data;
       console.log(`Received answer: ${selectedAnswer} for question: ${question} in room: ${room}`);
       const questionData = quizQuestions.find(q => q.question === question);
       let result = 'Incorrect';
@@ -57,9 +59,23 @@ io.on('connection', (socket) => {
       const responseMessage = `Question: ${question}, Answer: ${selectedAnswer} - ${result}`;
       io.to(room).emit('receiveQuizAnswer', responseMessage);
       console.log(`Broadcasting answer to room ${room}: ${responseMessage}`);
+
+      if (!userResults[room]) {
+        userResults[room] = {};
+      }
+      if (!userResults[room][nickname]) {
+        userResults[room][nickname] = { correctAnswersCount: 0, totalQuestions: quizQuestions.length };
+      }
+      if (result === 'Correct') {
+        userResults[room][nickname].correctAnswersCount++;
+      }
     } catch (error) {
       console.error(`Error processing quiz answer: ${error.message}`);
     }
+  });
+
+  socket.on('getResults', (room) => {
+    io.to(room).emit('receiveResults', userResults[room]);
   });
 });
 
