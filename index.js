@@ -20,15 +20,47 @@ const io = socketIo(server, {
   }
 });
 
+const userResults = {}; // Store results of all users
+
+io.on('connection', (socket) => {
+  console.log('A user connected');
+
+  socket.on('joinRoom', (room) => {
+    socket.join(room);
+    console.log(`User joined room: ${room}`);
+  });
+
+  socket.on('sendQuizAnswer', ({ room, question, selectedAnswer, nickname }) => {
+    const isCorrect = quizQuestions.find(q => q.question === question).correctAnswer === selectedAnswer;
+
+    if (!userResults[nickname]) {
+      userResults[nickname] = { correctAnswersCount: 0, totalQuestions: 0 };
+    }
+    userResults[nickname].totalQuestions += 1;
+    if (isCorrect) {
+      userResults[nickname].correctAnswersCount += 1;
+    }
+
+    // Emit to the same room
+    io.to(room).emit('receiveQuizAnswer', { question, selectedAnswer, nickname, isCorrect });
+  });
+
+  socket.on('getResults', (room) => {
+    io.to(room).emit('receiveResults', userResults);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
 const quizQuestions = [
   { question: "What is the capital of Spain?", answer: "Madrid" },
   { question: "What is 2 + 2?", answer: "4" },
   { question: "What is the capital of France?", answer: "Paris" },
   { question: "What is the largest planet?", answer: "Jupiter" },
   { question: "What is the boiling point of water in Celsius?", answer: "100" }
-];
-
-const userResults = {};
+];  
 
 io.on('connection', (socket) => {
   console.log(`${socket.id} New user connected`);
@@ -37,10 +69,17 @@ io.on('connection', (socket) => {
     console.log(`${socket.id} Client disconnected`);
   });
 
-  socket.on('joinRoom', (room) => {
+  socket.on('joinRoom', (data) => {
+    const { room, nickname } = data;
     socket.join(room);
-    console.log(`Client joined room: ${room}`);
-    io.to(room).emit('message', `A new user has joined room ${room}`);
+    console.log(`Client ${nickname} joined room: ${room}`);
+    io.to(room).emit('message', `User ${nickname} has joined room ${room}`);
+    if (!userResults[room]) {
+      userResults[room] = {};
+    }
+    if (!userResults[room][nickname]) {
+      userResults[room][nickname] = { correctAnswersCount: 0, totalQuestions: quizQuestions.length };
+    }
   });
 
   socket.on('sendChatMessage', (data) => {
@@ -55,28 +94,20 @@ io.on('connection', (socket) => {
       let result = 'Incorrect';
       if (questionData && questionData.answer.toLowerCase() === selectedAnswer.toLowerCase()) {
         result = 'Correct';
+        userResults[room][nickname].correctAnswersCount++;
       }
       const responseMessage = `Question: ${question}, Answer: ${selectedAnswer} - ${result}`;
       io.to(room).emit('receiveQuizAnswer', responseMessage);
       console.log(`Broadcasting answer to room ${room}: ${responseMessage}`);
-
-      // Update user results
-      if (!userResults[room]) {
-        userResults[room] = {};
-      }
-      if (!userResults[room][nickname]) {
-        userResults[room][nickname] = { correctAnswersCount: 0, totalQuestions: quizQuestions.length };
-      }
-      if (result === 'Correct') {
-        userResults[room][nickname].correctAnswersCount++;
-      }
     } catch (error) {
       console.error(`Error processing quiz answer: ${error.message}`);
     }
   });
 
   socket.on('getResults', (room) => {
-    io.to(room).emit('receiveResults', userResults[room]);
+    console.log(`Getting results for room: ${room}`);
+    const results = userResults[room] || {};
+    io.to(room).emit('receiveResults', results);
   });
 });
 
