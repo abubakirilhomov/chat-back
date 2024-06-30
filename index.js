@@ -31,7 +31,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sendQuizAnswer', ({ room, question, selectedAnswer, nickname }) => {
-    const isCorrect = quizQuestions.find(q => q.question === question).correctAnswer === selectedAnswer;
+    const quizQuestion = quizQuestions.find(q => q.question === question);
+    const isCorrect = quizQuestion ? quizQuestion.correctAnswer === selectedAnswer : false;
 
     if (!userResults[nickname]) {
       userResults[nickname] = { correctAnswersCount: 0, totalQuestions: 0 };
@@ -41,7 +42,6 @@ io.on('connection', (socket) => {
       userResults[nickname].correctAnswersCount += 1;
     }
 
-    // Emit to the same room
     io.to(room).emit('receiveQuizAnswer', { question, selectedAnswer, nickname, isCorrect });
   });
 
@@ -109,6 +109,10 @@ io.on('connection', (socket) => {
     const results = userResults[room] || {};
     io.to(room).emit('receiveResults', results);
   });
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 4000;
