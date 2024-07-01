@@ -1,13 +1,13 @@
 const express = require('express');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const { Server } = require('http');
+const http = require('http'); // Import http module
 const path = require('path');
 const bodyParser = require('body-parser');
 const { Low, JSONFile } = require('lowdb');
 
 const app = express();
-const server = Server(app);
+const server = http.createServer(app); // Create server using http module
 const io = socketIo(server, {
   cors: {
     origin: ['https://chat-quiz-front.vercel.app', 'http://localhost:3000'],
