@@ -3,16 +3,11 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const { Server } = require('http');
 const path = require('path');
+const bodyParser = require('body-parser');
+const { Low, JSONFile } = require('lowdb');
 
 const app = express();
-
-app.use(cors({
-  origin: ['https://chat-quiz-front.vercel.app', 'http://localhost:3000'],
-  methods: ['GET', 'POST'],
-  credentials: true
-}));
-const server = http.createServer(app);
-
+const server = Server(app);
 const io = socketIo(server, {
   cors: {
     origin: ['https://chat-quiz-front.vercel.app', 'http://localhost:3000'],
@@ -20,102 +15,47 @@ const io = socketIo(server, {
   }
 });
 
-const userResults = {}; // Store results of all users
+app.use(cors());
+app.use(bodyParser.json());
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
+const adapter = new JSONFile('db.json');
+const db = new Low(adapter);
 
-  socket.on('joinRoom', (room) => {
-    socket.join(room);
-    console.log(`User joined room: ${room}`);
-  });
+app.post('/results', async (req, res) => {
+  const { nickname, correctAnswersCount, totalQuestions } = req.body;
 
-  socket.on('sendQuizAnswer', ({ room, question, selectedAnswer, nickname }) => {
-    const quizQuestion = quizQuestions.find(q => q.question === question);
-    const isCorrect = quizQuestion ? quizQuestion.correctAnswer === selectedAnswer : false;
+  await db.read();
+  const results = db.data.results || [];
 
-    if (!userResults[nickname]) {
-      userResults[nickname] = { correctAnswersCount: 0, totalQuestions: 0 };
-    }
-    userResults[nickname].totalQuestions += 1;
-    if (isCorrect) {
-      userResults[nickname].correctAnswersCount += 1;
-    }
+  const existingUser = results.find(result => result.nickname === nickname);
+  if (existingUser) {
+    existingUser.correctAnswersCount = correctAnswersCount;
+    existingUser.totalQuestions = totalQuestions;
+  } else {
+    results.push({ nickname, correctAnswersCount, totalQuestions });
+  }
 
-    io.to(room).emit('receiveQuizAnswer', { question, selectedAnswer, nickname, isCorrect });
-  });
+  db.data.results = results;
+  await db.write();
 
-  socket.on('getResults', (room) => {
-    io.to(room).emit('receiveResults', userResults);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
+  res.json({ message: 'Results saved successfully' });
 });
 
-const quizQuestions = [
-  { question: "What is the capital of Spain?", answer: "Madrid" },
-  { question: "What is 2 + 2?", answer: "4" },
-  { question: "What is the capital of France?", answer: "Paris" },
-  { question: "What is the largest planet?", answer: "Jupiter" },
-  { question: "What is the boiling point of water in Celsius?", answer: "100" }
-];  
+app.get('/ratings', async (req, res) => {
+  await db.read();
+  const results = db.data.results || [];
+  res.json(results);
+});
 
 io.on('connection', (socket) => {
-  console.log(`${socket.id} New user connected`);
-
-  socket.on('disconnect', () => {
-    console.log(`${socket.id} Client disconnected`);
-  });
-
-  socket.on('joinRoom', (data) => {
-    const { room, nickname } = data;
+  socket.on('joinRoom', (room) => {
     socket.join(room);
-    console.log(`Client ${nickname} joined room: ${room}`);
-    io.to(room).emit('message', `User ${nickname} has joined room ${room}`);
-    if (!userResults[room]) {
-      userResults[room] = {};
-    }
-    if (!userResults[room][nickname]) {
-      userResults[room][nickname] = { correctAnswersCount: 0, totalQuestions: quizQuestions.length };
-    }
-  });
-
-  socket.on('sendChatMessage', (data) => {
-    io.to(data.room).emit('receiveChatMessage', data.message);
   });
 
   socket.on('sendQuizAnswer', (data) => {
-    try {
-      const { room, question, selectedAnswer, nickname } = data;
-      console.log(`Received answer: ${selectedAnswer} for question: ${question} in room: ${room}`);
-      const questionData = quizQuestions.find(q => q.question === question);
-      let result = 'Incorrect';
-      if (questionData && questionData.answer.toLowerCase() === selectedAnswer.toLowerCase()) {
-        result = 'Correct';
-        userResults[room][nickname].correctAnswersCount++;
-      }
-      const responseMessage = `Question: ${question}, Answer: ${selectedAnswer} - ${result}`;
-      io.to(room).emit('receiveQuizAnswer', responseMessage);
-      console.log(`Broadcasting answer to room ${room}: ${responseMessage}`);
-    } catch (error) {
-      console.error(`Error processing quiz answer: ${error.message}`);
-    }
-  });
-
-  socket.on('getResults', (room) => {
-    console.log(`Getting results for room: ${room}`);
-    const results = userResults[room] || {};
-    io.to(room).emit('receiveResults', results);
+    io.to(data.room).emit('receiveQuizAnswer', data);
   });
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-});
-
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
