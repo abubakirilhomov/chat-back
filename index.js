@@ -3,7 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const connectDB = require('./db');
-const ratingRoutes = require('./routes/ratings'); // Adjust path as needed
+const ratingRoutes = require('./routes/ratings');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,13 +27,21 @@ connectDB();
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
+// Socket.io event handlers
 io.on('connection', (socket) => {
+  console.log('A user connected');
+
   socket.on('joinRoom', (room) => {
     socket.join(room);
+    console.log(`User joined room: ${room}`);
   });
 
   socket.on('sendQuizAnswer', (data) => {
     io.to(data.room).emit('receiveQuizAnswer', data);
+    console.log(`Quiz answer sent to room: ${data.room}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
   });
 });
-//ha
