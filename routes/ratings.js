@@ -1,7 +1,5 @@
-// routes/ratings.js
-
 const express = require('express');
-const Rating = require('../models/Rating'); // Adjust the path as needed
+const Rating = require('../models/Ratings'); // Adjust the path if necessary
 const router = express.Router();
 
 // Get all ratings
