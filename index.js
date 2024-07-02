@@ -1,51 +1,31 @@
 const express = require('express');
-const socketIo = require('socket.io');
 const cors = require('cors');
-const http = require('http'); // Import http module
-const path = require('path');
-const bodyParser = require('body-parser');
-const { Low, JSONFile } = require('lowdb');
+const http = require('http');
+const socketIo = require('socket.io');
+const connectDB = require('./db');
+const ratingRoutes = require('./routes/ratings'); // Adjust path as needed
 
 const app = express();
-const server = http.createServer(app); // Create server using http module
+const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: ['https://chat-quiz-front.vercel.app', 'http://localhost:3000'],
-    methods: ['GET', 'POST']
-  }
+    methods: ['GET', 'POST'],
+  },
 });
 
+// Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-const adapter = new JSONFile('db.json');
-const db = new Low(adapter);
+// Routes
+app.use('/api', ratingRoutes);
 
-app.post('/results', async (req, res) => {
-  const { nickname, correctAnswersCount, totalQuestions } = req.body;
+// Connect to DB and start server
+connectDB();
 
-  await db.read();
-  const results = db.data.results || [];
-
-  const existingUser = results.find(result => result.nickname === nickname);
-  if (existingUser) {
-    existingUser.correctAnswersCount = correctAnswersCount;
-    existingUser.totalQuestions = totalQuestions;
-  } else {
-    results.push({ nickname, correctAnswersCount, totalQuestions });
-  }
-
-  db.data.results = results;
-  await db.write();
-
-  res.json({ message: 'Results saved successfully' });
-});
-
-app.get('/ratings', async (req, res) => {
-  await db.read();
-  const results = db.data.results || [];
-  res.json(results);
-});
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 io.on('connection', (socket) => {
   socket.on('joinRoom', (room) => {
@@ -56,6 +36,3 @@ io.on('connection', (socket) => {
     io.to(data.room).emit('receiveQuizAnswer', data);
   });
 });
-
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
