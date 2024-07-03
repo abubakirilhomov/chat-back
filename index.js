@@ -1,3 +1,4 @@
+//mongodb+srv://2ilhomovabubakir2:ytgb25RKMpjrf1x4@cluster0.ijidzzs.mongodb.net/quiz-db1?retryWrites=true&w=majority&appName=Cluster0
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -21,10 +22,9 @@ app.use(express.json());
 // Routes
 app.use('/api', ratingRoutes);
 
-// Connect to DB and start server
 connectDB();
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 7000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Socket.io event handlers
