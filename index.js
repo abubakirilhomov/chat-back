@@ -18,7 +18,10 @@ const io = socketIo(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+app.get('/getResults', async(req, res) =>{
+  const resultsData = await ResultModel.find();
+  res.json(resultsData);
+});
 // Routes
 app.use('/api', ratingRoutes);
 
