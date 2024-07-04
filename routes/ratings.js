@@ -1,5 +1,5 @@
 const express = require('express');
-const Rating = require('../models/Rating');  // Ensure the path is correct
+const Rating = require('../models/Ratings');  // Ensure the path is correct
 const router = express.Router();
 
 // Get all ratings
