@@ -1,10 +1,9 @@
-//mongodb+srv://2ilhomovabubakir2:ytgb25RKMpjrf1x4@cluster0.ijidzzs.mongodb.net/quiz-db1?retryWrites=true&w=majority&appName=Cluster0
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
-const connectDB = require('./db');
-const ratingRoutes = require('./routes/ratings');
+// const connectDB = require('./db'); // MongoDB connection
+// const ratingRoutes = require('./routes/ratings'); // MongoDB routes
 
 const app = express();
 const server = http.createServer(app);
@@ -18,16 +17,17 @@ const io = socketIo(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.get('/getResults', async(req, res) =>{
-  const resultsData = await ResultModel.find();
-  res.json(resultsData);
+app.get('/getResults', async (req, res) => {
+  // const resultsData = await ResultModel.find(); // Fetch results from MongoDB
+  // res.json(resultsData); // Send results as JSON response
+  res.json([]); // Placeholder response
 });
 // Routes
-app.use('/api', ratingRoutes);
+// app.use('/api', ratingRoutes); // MongoDB rating routes
 
-connectDB();
+// connectDB(); // Connect to MongoDB
 
-const PORT = process.env.PORT || 7000;
+const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Socket.io event handlers
