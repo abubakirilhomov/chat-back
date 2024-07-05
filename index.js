@@ -32,19 +32,24 @@ server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Socket.io event handlers
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log('New client connected');
 
   socket.on('joinRoom', (room) => {
     socket.join(room);
-    console.log(`User joined room: ${room}`);
+    console.log(`Client joined room: ${room}`);
   });
 
-  socket.on('sendQuizAnswer', (data) => {
-    io.to(data.room).emit('receiveQuizAnswer', data);
-    console.log(`Quiz answer sent to room: ${data.room}`);
+  socket.on('leaveRoom', (room) => {
+    socket.leave(room);
+    console.log(`Client left room: ${room}`);
+  });
+
+  socket.on('sendChatMessage', ({ message, room }) => {
+    io.to(room).emit('receiveChatMessage', message);
+    console.log(`Message sent to room ${room}: `, message);
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('Client disconnected');
   });
 });
